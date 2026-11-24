@@ -1,0 +1,196 @@
+---
+title: Quickstart
+description: Run ClickHouse locally, load a sample dataset, and run your first query.
+---
+
+import { Steps, Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+In about 10 minutes you will start a local ClickHouse server, create a table, fill it with one million rows of synthetic web events, and run an analytical query over them.
+
+<Aside title="Tested">
+	The single-binary path was run end to end on macOS (Apple Silicon) with ClickHouse 26.12 on
+	24 November 2026. The Docker path hasn't been tested yet. Surprises found along the way are on the
+	[Troubleshooting](/clickhouse-guide/troubleshooting/) page.
+</Aside>
+
+## Before you begin
+
+- macOS or Linux (on Windows, use WSL 2)
+- A terminal
+- About 500 MB of free disk space (the binary itself is about 180 MB)
+
+## Steps
+
+<Steps>
+
+1. **Install ClickHouse.**
+
+   <Tabs syncKey="install">
+   <TabItem label="Single binary">
+   This downloads one `clickhouse` binary into the current directory:
+
+   ```sh
+   mkdir clickhouse-quickstart && cd clickhouse-quickstart
+   curl https://clickhouse.com/ | sh
+   ```
+
+   By default the script also installs a second tool, `clickhousectl`, into `~/.local/bin`, and downloads a development build rather than a release. See [Troubleshooting](/clickhouse-guide/troubleshooting/#the-install-script-also-installs-clickhousectl-outside-your-folder) to change either.
+   </TabItem>
+   <TabItem label="Docker">
+   ```sh
+   docker run -d --name clickhouse-quickstart \
+     -p 8123:8123 -p 9000:9000 \
+     -e CLICKHOUSE_PASSWORD=changeme \
+     --ulimit nofile=262144:262144 \
+     clickhouse/clickhouse-server
+   ```
+   </TabItem>
+   </Tabs>
+
+2. **Start the server.**
+
+   <Tabs syncKey="install">
+   <TabItem label="Single binary">
+   ```sh
+   ./clickhouse server
+   ```
+   The server prints a lot of log output, including some `<Warning>` lines. [That's normal](/clickhouse-guide/troubleshooting/#the-server-prints-warnings-on-startup). It also creates data folders in the current directory.
+
+   Leave it running, and open a second terminal in the same directory for the next steps.
+   </TabItem>
+   <TabItem label="Docker">
+   The container started the server in step 1. Check that it's running:
+   ```sh
+   docker ps --filter name=clickhouse-quickstart
+   ```
+   </TabItem>
+   </Tabs>
+
+3. **Connect with the client.**
+
+   <Tabs syncKey="install">
+   <TabItem label="Single binary">
+   ```sh
+   ./clickhouse client
+   ```
+   </TabItem>
+   <TabItem label="Docker">
+   ```sh
+   docker exec -it clickhouse-quickstart clickhouse-client --password changeme
+   ```
+   </TabItem>
+   </Tabs>
+
+   You should see a prompt ending in `:)`. Everything after this point is SQL typed at that prompt.
+
+4. **Create a table.**
+
+   ```sql
+   CREATE TABLE events
+   (
+       event_time  DateTime,
+       user_id     UInt32,
+       event_type  LowCardinality(String),
+       page        String,
+       duration_ms UInt32
+   )
+   ENGINE = MergeTree
+   ORDER BY (event_type, event_time);
+   ```
+
+   `ENGINE = MergeTree` and `ORDER BY` are explained in [Concepts](/clickhouse-guide/concepts/#mergetree).
+
+5. **Load one million rows of sample data.**
+
+   This generates synthetic events with the `numbers()` table function, so you don't need to download anything:
+
+   ```sql
+   INSERT INTO events
+   SELECT
+       now() - toIntervalSecond(rand(1) % 2592000)                AS event_time,
+       rand(2) % 10000                                           AS user_id,
+       ['page_view', 'click', 'signup', 'purchase'][1 + rand(3) % 4] AS event_type,
+       concat('/page/', toString(rand(4) % 50))                  AS page,
+       rand(5) % 5000                                            AS duration_ms
+   FROM numbers(1000000);
+   ```
+
+   <Aside type="note">
+   Each `rand()` call has a different argument (`rand(1)`, `rand(2)`, …). ClickHouse treats identical
+   expressions in one query as the same value, so five plain `rand()` calls would return the same random
+   number in every column of a row.
+   </Aside>
+
+6. **Check that the data arrived.**
+
+   ```sql
+   SELECT count() FROM events;
+   ```
+
+   Expected result: `1000000`.
+
+7. **Run your first analytical query.**
+
+   ```sql
+   SELECT
+       event_type,
+       count()               AS events,
+       uniq(user_id)         AS users,
+       round(avg(duration_ms)) AS avg_duration_ms
+   FROM events
+   GROUP BY event_type
+   ORDER BY events DESC;
+   ```
+
+   You'll get four rows, one per event type. Your numbers will differ slightly because the data is random:
+
+   ```
+   ┌─event_type─┬─events─┬─users─┬─avg_duration_ms─┐
+   │ signup     │ 250543 │ 10000 │            2499 │
+   │ purchase   │ 250526 │ 10000 │            2498 │
+   │ click      │ 249731 │ 10000 │            2498 │
+   │ page_view  │ 249200 │ 10000 │            2500 │
+   └────────────┴────────┴───────┴─────────────────┘
+   ```
+
+   `users` is 10,000 in every row because the synthetic data spreads a million events across only 10,000 users, so every user has done every kind of event. The line under the result shows how many rows were read and how long it took. In testing, this query took about 30 ms.
+
+</Steps>
+
+## Try a few more queries
+
+Events per day for the last week:
+
+```sql
+SELECT toDate(event_time) AS day, count() AS events
+FROM events
+WHERE event_time >= now() - INTERVAL 7 DAY
+GROUP BY day
+ORDER BY day;
+```
+
+Expect eight rows, not seven: the first and last days are only partly inside the 7-day window, so they have fewer events.
+
+The ten most visited pages:
+
+```sql
+SELECT page, count() AS views
+FROM events
+WHERE event_type = 'page_view'
+GROUP BY page
+ORDER BY views DESC
+LIMIT 10;
+```
+
+## Clean up
+
+```sql
+DROP TABLE events;
+```
+
+Then stop the server with <kbd>Ctrl</kbd>+<kbd>C</kbd> and delete the `clickhouse-quickstart` folder (single binary), or run `docker rm -f clickhouse-quickstart` (Docker).
+
+## Next steps
+
+- Read [Concepts](/clickhouse-guide/concepts/) to understand why the query in step 7 was fast.
+- Try one of ClickHouse's public example datasets from the [official docs](https://clickhouse.com/docs/getting-started/example-datasets).

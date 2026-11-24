@@ -1,0 +1,35 @@
+---
+title: Getting started with ClickHouse
+description: A small, hands-on guide to loading data into ClickHouse and running your first queries.
+template: splash
+hero:
+  tagline: Load a dataset, run your first analytical query, and understand what ClickHouse is doing underneath.
+  actions:
+    - text: Start the quickstart
+      link: /clickhouse-guide/quickstart/
+      icon: right-arrow
+    - text: What is ClickHouse?
+      link: /clickhouse-guide/overview/
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid>
+	<Card title="Overview" icon="information">
+		What ClickHouse is, and the kinds of problems it is good at.
+		[Read the overview →](/clickhouse-guide/overview/)
+	</Card>
+	<Card title="Quickstart" icon="rocket">
+		Run ClickHouse locally, load a million rows of sample data, and query it.
+		[Start →](/clickhouse-guide/quickstart/)
+	</Card>
+	<Card title="Concepts" icon="open-book">
+		The handful of terms a new user runs into first: columns, parts, `MergeTree`, the sorting key.
+		[Learn →](/clickhouse-guide/concepts/)
+	</Card>
+	<Card title="Troubleshooting" icon="warning">
+		Problems hit while actually following the quickstart, and how they were fixed.
+		[Fix →](/clickhouse-guide/troubleshooting/)
+	</Card>
+</CardGrid>

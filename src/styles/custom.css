@@ -1,0 +1,20 @@
+/*
+ * Starlight exposes its theme as CSS custom properties.
+ * Overriding the accent scale here recolors links, the active sidebar item,
+ * buttons and focus rings everywhere, without touching any component.
+ * Reference: https://starlight.astro.build/guides/css-and-tailwind/
+ */
+
+/* Dark mode (Starlight's default) */
+:root {
+	--sl-color-accent-low: #3a2f05;
+	--sl-color-accent: #d9a400;
+	--sl-color-accent-high: #ffe9a3;
+}
+
+/* Light mode */
+:root[data-theme='light'] {
+	--sl-color-accent-low: #fff3c4;
+	--sl-color-accent: #8a6400;
+	--sl-color-accent-high: #3d2c00;
+}
