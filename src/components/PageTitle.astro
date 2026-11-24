@@ -1,0 +1,22 @@
+---
+// Overrides Starlight's PageTitle so each page shows its one-sentence
+// `description` under the title, as a lead. Starlight otherwise uses the
+// description only in the page's <meta> tags, where readers never see it.
+// Registered in astro.config.mjs under `components`.
+// Docs: https://starlight.astro.build/guides/overriding-components/
+import Default from '@astrojs/starlight/components/PageTitle.astro';
+
+const { description } = Astro.locals.starlightRoute.entry.data;
+---
+
+<Default />
+{description && <p class="page-lead">{description}</p>}
+
+<style>
+	.page-lead {
+		margin-top: 0.75rem;
+		font-size: var(--sl-text-lg);
+		line-height: 1.6;
+		color: var(--sl-color-gray-2);
+	}
+</style>

@@ -1,9 +1,9 @@
 ---
 title: Troubleshooting
-description: Problems and surprises encountered while following the quickstart, and how to handle them.
+description: Problems found by testing this guide against a running ClickHouse server, with the cause, the fix, and how each was found.
 ---
 
-Every entry on this page comes from actually running the [Quickstart](/clickhouse-guide/quickstart/). Nothing here is hypothetical.
+Every entry on this page comes from running the commands in this guide. Nothing here is hypothetical.
 
 **Test environment:** macOS on Apple Silicon, single-binary install, ClickHouse `26.12.1.349`, 24 November 2026.
 
@@ -88,6 +88,51 @@ SELECT rand() % 100 AS a, rand() % 100 AS b, rand() % 100 AS c FROM numbers(3);
 **Fix:** Give each call a different argument (`rand(1)`, `rand(2)`, …). The argument is otherwise ignored. This is what step 5 does.
 
 **How I found it:** Ran the query above, then the same query with `rand(1)`, `rand(2)`, `rand(3)`, which gave different values per column.
+
+## System tables return columns from the wrong table
+
+**When it happens:** Querying `system.columns` or `system.tables` for a table named `events`, as in the [Data engineers guide](/clickhouse-guide/guides/data-engineers/).
+
+**What you see:** `SELECT name, type FROM system.columns WHERE table = 'events'` returns nine columns, including `event`, `value`, and `description`. The Quickstart table has five.
+
+**Cause:** ClickHouse has a built-in table called `system.events`, which counts server events. Filtering on the table name alone matches both:
+
+```
+┌─database─┬─name───┐
+│ default  │ events │
+│ system   │ events │
+└──────────┴────────┘
+```
+
+**Fix:** Filter on the database too:
+
+```sql
+SELECT name, type
+FROM system.columns
+WHERE database = currentDatabase() AND table = 'events';
+```
+
+**How I found it:** While testing a query for the Data engineers guide, the column list included names that weren't in the `CREATE TABLE` statement. Listing every table called `events` in `system.tables` showed the second one.
+
+## `system.query_log` doesn't exist
+
+**When it happens:** Looking up past queries on a server started with `./clickhouse server`, as in the [Quickstart](/clickhouse-guide/quickstart/).
+
+**What you see:**
+
+```
+Code: 60. DB::Exception: ... Unknown table expression identifier 'system.query_log'. (UNKNOWN_TABLE)
+```
+
+**Cause:** Started without a config file, the server doesn't create its log tables. The startup log says so for each one, including:
+
+```
+Not creating system.query_log since corresponding section 'query_log' is missing from config
+```
+
+**Fix:** For the Quickstart, use the client instead. It prints the rows read and the time taken under each result. On a production server, the query log is usually configured. See [system.query_log](https://clickhouse.com/docs/reference/system-tables/query_log).
+
+**How I found it:** Tried to use `system.query_log` to check a query's rows read for this guide, and got `UNKNOWN_TABLE`. Searching the server log for `Not creating` showed about 30 log tables that weren't created, `query_log` among them.
 
 ## Not tested yet
 
