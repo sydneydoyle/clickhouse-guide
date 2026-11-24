@@ -5,11 +5,11 @@ sidebar:
   label: How ClickHouse stores data
 ---
 
-### Before you begin
+## Before you begin
 
 - A running server with the `events` table from the [Quickstart](/clickhouse-guide/quickstart/), if you want to run the examples.
 
-## Overview
+## Key terms
 
 A few terms explain most of what makes ClickHouse fast:
 
