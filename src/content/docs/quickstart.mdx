@@ -1,11 +1,19 @@
 ---
-title: Quickstart
-description: Run ClickHouse locally, load a sample dataset, and run your first query.
+title: Run your first query
+description: Run ClickHouse on your computer, load one million rows of sample events, and answer a question about them in SQL.
+sidebar:
+  label: Quickstart
 ---
 
 import { Steps, Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-In about 10 minutes you will start a local ClickHouse server, create a table, fill it with one million rows of synthetic web events, and run an analytical query over them.
+## Overview
+
+This guide takes you from nothing installed to a running ClickHouse server, a table of one million events, and the answer to a real question about them. It takes about 10 minutes.
+
+You don't need to know ClickHouse to follow it. If you've written a `SELECT` with a `GROUP BY` before, you know enough SQL.
+
+The steps follow one example: a product team wants to know which actions users take most on their website (page views, clicks, signups, or purchases), how many users take each one, and how long each takes.
 
 <Aside title="Tested">
 	The single-binary path was run end to end on macOS (Apple Silicon) with ClickHouse 26.12 on
@@ -13,28 +21,28 @@ In about 10 minutes you will start a local ClickHouse server, create a table, fi
 	[Troubleshooting](/clickhouse-guide/troubleshooting/) page.
 </Aside>
 
-## Before you begin
+### Before you begin
 
-- macOS or Linux (on Windows, use WSL 2)
-- A terminal
-- About 500 MB of free disk space (the binary itself is about 180 MB)
+- macOS or Linux. On Windows, use WSL 2.
+- A terminal.
+- About 500 MB of free disk space. The ClickHouse program itself is about 180 MB.
 
-## Steps
+## Set up ClickHouse and run a query
 
 <Steps>
 
-1. **Install ClickHouse.**
+1. ### Install ClickHouse
 
    <Tabs syncKey="install">
    <TabItem label="Single binary">
-   This downloads one `clickhouse` binary into the current directory:
+   This downloads one `clickhouse` program into a new folder:
 
    ```sh
    mkdir clickhouse-quickstart && cd clickhouse-quickstart
    curl https://clickhouse.com/ | sh
    ```
 
-   By default the script also installs a second tool, `clickhousectl`, into `~/.local/bin`, and downloads a development build rather than a release. See [Troubleshooting](/clickhouse-guide/troubleshooting/#the-install-script-also-installs-clickhousectl-outside-your-folder) to change either.
+   By default, the script also installs a second tool, `clickhousectl`, into `~/.local/bin`, and downloads a development build rather than a release. To change either, see [Troubleshooting](/clickhouse-guide/troubleshooting/#the-install-script-also-installs-clickhousectl-outside-your-folder).
    </TabItem>
    <TabItem label="Docker">
    ```sh
@@ -47,16 +55,16 @@ In about 10 minutes you will start a local ClickHouse server, create a table, fi
    </TabItem>
    </Tabs>
 
-2. **Start the server.**
+2. ### Start the server
 
    <Tabs syncKey="install">
    <TabItem label="Single binary">
    ```sh
    ./clickhouse server
    ```
-   The server prints a lot of log output, including some `<Warning>` lines. [That's normal](/clickhouse-guide/troubleshooting/#the-server-prints-warnings-on-startup). It also creates data folders in the current directory.
+   The server prints a lot of log output, including some `<Warning>` lines. [That's expected](/clickhouse-guide/troubleshooting/#the-server-prints-warnings-on-startup). It also stores its data in folders it creates in the current directory, which is why you made a new folder in step 1.
 
-   Leave it running, and open a second terminal in the same directory for the next steps.
+   Leave the server running, and open a second terminal in the same folder for the next steps.
    </TabItem>
    <TabItem label="Docker">
    The container started the server in step 1. Check that it's running:
@@ -66,7 +74,7 @@ In about 10 minutes you will start a local ClickHouse server, create a table, fi
    </TabItem>
    </Tabs>
 
-3. **Connect with the client.**
+3. ### Connect with the client
 
    <Tabs syncKey="install">
    <TabItem label="Single binary">
@@ -81,9 +89,11 @@ In about 10 minutes you will start a local ClickHouse server, create a table, fi
    </TabItem>
    </Tabs>
 
-   You should see a prompt ending in `:)`. Everything after this point is SQL typed at that prompt.
+   You'll see a prompt that ends in `:)`. From here on, type each SQL statement at that prompt.
 
-4. **Create a table.**
+4. ### Create a table
+
+   Decide what you'll store and how you'll usually filter it. The product team stores one row per event, and most of their questions start with an event type, so the table is sorted by `event_type`, then by time:
 
    ```sql
    CREATE TABLE events
@@ -98,11 +108,17 @@ In about 10 minutes you will start a local ClickHouse server, create a table, fi
    ORDER BY (event_type, event_time);
    ```
 
-   `ENGINE = MergeTree` and `ORDER BY` are explained in [Concepts](/clickhouse-guide/concepts/#mergetree).
+   | Part of the statement | What it decides |
+   | --- | --- |
+   | `ENGINE = MergeTree` | How the table is stored. Most tables use MergeTree. |
+   | `ORDER BY (event_type, event_time)` | The **sorting key**: the order rows are stored in, which decides how much data a query can skip. |
+   | `LowCardinality(String)` | Stores a column with few distinct values, like the four event types, more compactly. |
 
-5. **Load one million rows of sample data.**
+   For more on each choice, see [How ClickHouse stores data](/clickhouse-guide/concepts/).
 
-   This generates synthetic events with the `numbers()` table function, so you don't need to download anything:
+5. ### Load sample data
+
+   This generates one million synthetic events with the `numbers()` table function, so you don't need to download a dataset:
 
    ```sql
    INSERT INTO events
@@ -115,21 +131,32 @@ In about 10 minutes you will start a local ClickHouse server, create a table, fi
    FROM numbers(1000000);
    ```
 
+   The events cover the last 30 days and 10,000 users.
+
    <Aside type="note">
-   Each `rand()` call has a different argument (`rand(1)`, `rand(2)`, …). ClickHouse treats identical
-   expressions in one query as the same value, so five plain `rand()` calls would return the same random
-   number in every column of a row.
+   Each `rand()` call has a different argument (`rand(1)`, `rand(2)`, …). ClickHouse computes identical
+   expressions in a query only once, so five plain `rand()` calls would put the same number in every
+   column of a row. See [Troubleshooting](/clickhouse-guide/troubleshooting/#every-column-gets-the-same-random-value).
    </Aside>
 
-6. **Check that the data arrived.**
+6. ### Confirm the data loaded
+
+   Before you query the data, check that it arrived as expected:
 
    ```sql
    SELECT count() FROM events;
    ```
 
-   Expected result: `1000000`.
+   | Check | What to look for |
+   | --- | --- |
+   | Row count | `1000000` |
+   | Insert errors | None. If the `INSERT` fails, the client prints an exception that starts with `Code:`. |
 
-7. **Run your first analytical query.**
+   If the count isn't `1000000`, drop the table with `DROP TABLE events`, repeat steps 4 and 5, and read any error the `INSERT` prints.
+
+7. ### Answer the question
+
+   Now ask the product team's question: for each type of event, how many events were there, how many users took that action, and how long did it take on average?
 
    ```sql
    SELECT
@@ -142,7 +169,7 @@ In about 10 minutes you will start a local ClickHouse server, create a table, fi
    ORDER BY events DESC;
    ```
 
-   You'll get four rows, one per event type. Your numbers will differ slightly because the data is random:
+   You'll get four rows. Your numbers will be slightly different, because the data is random:
 
    ```
    ┌─event_type─┬─events─┬─users─┬─avg_duration_ms─┐
@@ -153,44 +180,69 @@ In about 10 minutes you will start a local ClickHouse server, create a table, fi
    └────────────┴────────┴───────┴─────────────────┘
    ```
 
-   `users` is 10,000 in every row because the synthetic data spreads a million events across only 10,000 users, so every user has done every kind of event. The line under the result shows how many rows were read and how long it took. In testing, this query took about 30 ms.
+   The line under the result shows how many rows ClickHouse read and how long it took. In testing, this query took about 30 ms.
+
+   `users` is 10,000 in every row because the synthetic data spreads a million events across 10,000 users, so every user has taken every action. Real data won't look this even.
+
+8. ### Go further
+
+   Once your first query works, choose what to try next. You might:
+
+   - **Look at a time range:** Count events per day for the last week.
+
+     ```sql
+     SELECT toDate(event_time) AS day, count() AS events
+     FROM events
+     WHERE event_time >= now() - INTERVAL 7 DAY
+     GROUP BY day
+     ORDER BY day;
+     ```
+
+     You'll get eight rows, not seven, because the first and last days are only partly inside the 7-day window.
+
+   - **Find the top pages:** List the ten most viewed pages.
+
+     ```sql
+     SELECT page, count() AS views
+     FROM events
+     WHERE event_type = 'page_view'
+     GROUP BY page
+     ORDER BY views DESC
+     LIMIT 10;
+     ```
+
+   - **See what a query reads:** Follow [How ClickHouse stores data](/clickhouse-guide/concepts/#how-the-sorting-key-decides-what-a-query-reads) to see how the sorting key lets ClickHouse skip data.
+
+   - **Load your own data:** Follow the [Data engineers guide](/clickhouse-guide/guides/data-engineers/) to load a CSV file.
+
+   You don't need to do all of these. Pick the one closest to your work.
 
 </Steps>
 
-## Try a few more queries
-
-Events per day for the last week:
-
-```sql
-SELECT toDate(event_time) AS day, count() AS events
-FROM events
-WHERE event_time >= now() - INTERVAL 7 DAY
-GROUP BY day
-ORDER BY day;
-```
-
-Expect eight rows, not seven: the first and last days are only partly inside the 7-day window, so they have fewer events.
-
-The ten most visited pages:
-
-```sql
-SELECT page, count() AS views
-FROM events
-WHERE event_type = 'page_view'
-GROUP BY page
-ORDER BY views DESC
-LIMIT 10;
-```
-
 ## Clean up
+
+When you're finished, delete the table:
 
 ```sql
 DROP TABLE events;
 ```
 
-Then stop the server with <kbd>Ctrl</kbd>+<kbd>C</kbd> and delete the `clickhouse-quickstart` folder (single binary), or run `docker rm -f clickhouse-quickstart` (Docker).
+Then stop the server:
+
+<Tabs syncKey="install">
+<TabItem label="Single binary">
+Press <kbd>Ctrl</kbd>+<kbd>C</kbd> in the server's terminal, then delete the `clickhouse-quickstart` folder.
+</TabItem>
+<TabItem label="Docker">
+```sh
+docker rm -f clickhouse-quickstart
+```
+</TabItem>
+</Tabs>
 
 ## Next steps
 
-- Read [Concepts](/clickhouse-guide/concepts/) to understand why the query in step 7 was fast.
-- Try one of ClickHouse's public example datasets from the [official docs](https://clickhouse.com/docs/getting-started/example-datasets).
+- Follow the [Analysts guide](/clickhouse-guide/guides/analysts/) to explore tables and write analytical SQL.
+- Follow the [Data engineers guide](/clickhouse-guide/guides/data-engineers/) to design tables and load your own data.
+- Read [How ClickHouse stores data](/clickhouse-guide/concepts/) to understand why the query in step 7 was fast.
+- Try one of ClickHouse's [sample datasets](https://clickhouse.com/docs/get-started/sample-datasets) for more realistic data.

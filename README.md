@@ -8,9 +8,10 @@ A small, hands-on documentation site for new ClickHouse users, built with [Astro
 
 | Page | Purpose |
 | --- | --- |
-| Overview | What ClickHouse is and what it's good (and not good) for |
+| What is ClickHouse? (home) | What ClickHouse is, when to use it, and where to start by role |
 | Quickstart | Run ClickHouse locally, load 1M rows of synthetic data, run a first query |
-| Concepts | Column storage, MergeTree, parts, the sorting key, `LowCardinality` |
+| Analysts, Data engineers | Role guides: the tools you use, what others set up, and tested first tasks |
+| How ClickHouse stores data | Columns, parts, merges, the sorting key, `LowCardinality` |
 | Troubleshooting | Problems found while actually testing the quickstart, and how each was found |
 | Engineering notes | How the site is built, validated and deployed |
 

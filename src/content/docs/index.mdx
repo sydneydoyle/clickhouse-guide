@@ -1,35 +1,86 @@
 ---
-title: Getting started with ClickHouse
-description: A small, hands-on guide to loading data into ClickHouse and running your first queries.
-template: splash
-hero:
-  tagline: Load a dataset, run your first analytical query, and understand what ClickHouse is doing underneath.
-  actions:
-    - text: Start the quickstart
-      link: /clickhouse-guide/quickstart/
-      icon: right-arrow
-    - text: What is ClickHouse?
-      link: /clickhouse-guide/overview/
-      variant: minimal
+title: What is ClickHouse?
+description: ClickHouse is an open-source database for analytical queries. Load large volumes of data, ask questions of it in SQL, and get answers in milliseconds.
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+## Overview
 
-<CardGrid>
-	<Card title="Overview" icon="information">
-		What ClickHouse is, and the kinds of problems it is good at.
-		[Read the overview →](/clickhouse-guide/overview/)
-	</Card>
-	<Card title="Quickstart" icon="rocket">
-		Run ClickHouse locally, load a million rows of sample data, and query it.
-		[Start →](/clickhouse-guide/quickstart/)
-	</Card>
-	<Card title="Concepts" icon="open-book">
-		The handful of terms a new user runs into first: columns, parts, `MergeTree`, the sorting key.
-		[Learn →](/clickhouse-guide/concepts/)
-	</Card>
-	<Card title="Troubleshooting" icon="warning">
-		Problems hit while actually following the quickstart, and how they were fixed.
-		[Fix →](/clickhouse-guide/troubleshooting/)
-	</Card>
-</CardGrid>
+ClickHouse is an open-source, column-oriented database for analytical queries: questions that scan and summarize many rows, such as "how many signups did we get per day last month, by country?" Teams use it for product analytics, logs and metrics, and dashboards that need answers in milliseconds to seconds.
+
+With ClickHouse, you can:
+
+- **Load large volumes of data** from files, other databases, or streams, in batches of thousands to millions of rows. See [How ClickHouse stores data](/clickhouse-guide/concepts/).
+- **Query it in SQL**, with functions built for analytics, such as `uniq()` for distinct counts and `countIf()` for conditional counts. See the [Analysts guide](/clickhouse-guide/guides/analysts/).
+- **Keep queries fast as data grows** by choosing how each table is sorted on disk. See the [Data engineers guide](/clickhouse-guide/guides/data-engineers/).
+- **Run it where you need it**: on a laptop, on your own servers, or as a managed service.
+
+## A query from start to finish
+
+Here's how the parts fit together, using the dataset from the [Quickstart](/clickhouse-guide/quickstart/):
+
+1. A data engineer creates an `events` table and chooses its **sorting key**, `(event_type, event_time)`, because most queries filter by event type.
+2. They load one million events in a single `INSERT`. ClickHouse sorts the rows by that key and writes them to disk as one **part**.
+3. An analyst asks how many purchases happened, and by how many users.
+4. Because the table is sorted by `event_type`, ClickHouse reads only the blocks that hold purchases: 32 of the table's 123.
+5. It reads only the two columns the query names and skips the other three. The answer comes back in milliseconds.
+
+For why each of these steps is fast, see [How ClickHouse stores data](/clickhouse-guide/concepts/).
+
+## When to use ClickHouse
+
+ClickHouse is built for reading a few columns across many rows. It isn't built for frequent single-row updates.
+
+| Use ClickHouse when | Example |
+| --- | --- |
+| You aggregate across many rows. | Daily active users for the last 90 days |
+| Data is mostly appended, not updated. | Clickstream events, logs, metrics |
+| People need answers quickly. | A dashboard that refreshes every few seconds |
+
+| Use a row-oriented database when | Example |
+| --- | --- |
+| You update or delete single rows often. | Changing an order's status as it ships |
+| You read whole rows by key. | Loading one customer's profile in an app |
+| You need multi-row transactions. | Moving money between two accounts |
+
+Many teams use both: a row-oriented database such as PostgreSQL runs the application, and ClickHouse answers the analytical questions.
+
+## Get started by role
+
+Each role uses ClickHouse differently. Start with the guide for yours.
+
+| Role | What you do in ClickHouse | Start here |
+| --- | --- | --- |
+| New to ClickHouse | Run it locally, load sample data, and run your first query | [Quickstart](/clickhouse-guide/quickstart/) |
+| Analysts | Explore tables, write analytical SQL, and check what a query reads | [Analysts guide](/clickhouse-guide/guides/analysts/) |
+| Data engineers | Design tables, load data in batches, and keep queries fast | [Data engineers guide](/clickhouse-guide/guides/data-engineers/) |
+
+If you're new, start with the Quickstart whatever your role. It gives you a running server and a table that both role guides use in their examples.
+
+## Choose how to run it
+
+| Option | Good for |
+| --- | --- |
+| `clickhouse local` | Querying files on your laptop with no server at all |
+| `clickhouse server` and `clickhouse client` | Learning how a real deployment behaves. The [Quickstart](/clickhouse-guide/quickstart/) uses this. |
+| Docker image | An isolated environment you can throw away |
+| ClickHouse Cloud | A managed service, with nothing to install |
+
+## Explore this guide
+
+### Get started
+
+- **[Quickstart](/clickhouse-guide/quickstart/):** Run ClickHouse, load one million rows of sample data, and run your first query.
+- **[Analysts](/clickhouse-guide/guides/analysts/):** Find your way around, write your first analytical queries, and see what they read.
+- **[Data engineers](/clickhouse-guide/guides/data-engineers/):** Design a table, load data, and watch how ClickHouse stores it.
+
+### Understand how it works
+
+- **[How ClickHouse stores data](/clickhouse-guide/concepts/):** Columns, parts, merges, and how the sorting key decides what a query reads.
+
+### Fix problems
+
+- **[Troubleshooting](/clickhouse-guide/troubleshooting/):** Problems found by testing this guide, with how each was found and fixed.
+
+### About this guide
+
+- **[Engineering notes](/clickhouse-guide/engineering-notes/):** How this site is built, tested, and deployed.

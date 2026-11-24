@@ -16,12 +16,29 @@ export default defineConfig({
 				'A small, hands-on guide to loading data into ClickHouse and running your first queries.',
 			// Customization hook: overrides Starlight's CSS variables (see src/styles/custom.css).
 			customCss: ['./src/styles/custom.css'],
+			// Component override: shows each page's description as a lead under the title.
+			components: { PageTitle: './src/components/PageTitle.astro' },
 			// The sidebar is listed explicitly so the reading order is intentional,
 			// rather than alphabetical (which is what `autogenerate` would give you).
 			sidebar: [
-				{ label: 'Overview', slug: 'overview' },
-				{ label: 'Quickstart', slug: 'quickstart' },
-				{ label: 'Concepts', slug: 'concepts' },
+				{
+					label: 'Get started',
+					items: [
+						{ label: 'What is ClickHouse?', link: '/' },
+						{ label: 'Quickstart', slug: 'quickstart' },
+					],
+				},
+				{
+					label: 'Start here by role',
+					items: [
+						{ label: 'Analysts', slug: 'guides/analysts' },
+						{ label: 'Data engineers', slug: 'guides/data-engineers' },
+					],
+				},
+				{
+					label: 'Understand how it works',
+					items: [{ label: 'How ClickHouse stores data', slug: 'concepts' }],
+				},
 				{ label: 'Troubleshooting', slug: 'troubleshooting' },
 				{
 					label: 'About this site',
