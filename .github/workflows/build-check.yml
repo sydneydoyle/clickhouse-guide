@@ -1,0 +1,37 @@
+# Builds the site on every pull request to main, so a change that breaks
+# the build shows a red ✗ on the pull request before anyone merges it.
+# Unlike deploy.yml, this publishes nothing.
+name: Build check
+
+on:
+  pull_request:
+    branches: [main]
+
+# Read-only: this job only needs to check out the code.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the pull request's code
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          # Caches npm's download cache between runs, keyed on package-lock.json.
+          cache: npm
+
+      # `npm ci` installs exactly what package-lock.json lists, and fails if
+      # package.json and the lockfile disagree. `npm install` would quietly
+      # update the lockfile instead.
+      - name: Install dependencies
+        run: npm ci
+
+      # Fails the job (and the check) if Astro reports any error,
+      # for example a page whose frontmatter doesn't match the content schema.
+      - name: Build the site
+        run: npm run build
